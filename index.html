@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>VueJS - Rizqu Abdur Rachman</title>
+    <style>
+        .mb-5 {
+            margin-bottom: 0.5rem;
+        }
+        body{
+            font-family: tahoma;
+            color:#282828;
+            margin: 0px;
+            background-color: #f2f2f2;
+        }
+        .nav-bar{
+            background: linear-gradient(-90deg, #84CF6A, #16C0B0);
+            height: 60px;
+            margin-bottom: 15px;
+        }
+        .nav-bar-bottom{
+            margin-top: 15px;
+        }
+        .pencari{
+            display: flex;
+            flex-flow: wrap;
+            border-radius: 5px;
+            background-color: #f2f2f2;
+            margin: auto;
+            width: 75%;
+            border: 3px solid #73AD21;
+            padding: 10px;
+        }
+        .info-pencarian{
+            margin-top: 10px;
+            width: 120%;
+        }
+        .button{
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        .disabledButton{
+            background-color: #d8d8d8;
+        }
+        input[type=text]{
+            width: 70%;
+            padding: 12px 20px;
+            margin: 8px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="nav-bar">
+        </div>
+        <div class="pencari">
+            <div class="info-pencarian">
+            <h1>{{ title }}</h1>
+        <div class="mb-5">
+            <input class="mb-5" type="text" v-model="url" placeholder="Masukkan url youtube..">
+        </div>
+        <div class="mb-5">
+            <input class="kataKunci " type="text" v-model="kataKunci" placeholder="Masukkan kata kunci..">
+            <button class="button" @click='bersihkan'>Bersihkan</button>
+        </div>
+        <div class="mb-5">
+            <button @click="ketikaPertamaDiklik" :disabled="!paginasi.first" :class="{ disabledButton:!paginasi.first }" class="button">First</button>
+            <button @click="ketikaSebelumnyaDiKlik" :disabled="!paginasi.prev" :class="{ disabledButton:!paginasi.prev }" class="button">Previous</button>
+            <button @click="ketikaSelanjutnyaDiklik" :disabled="!paginasi.next" :class="{ disabledButton:!paginasi.next }" class="button">Next</button>
+            <button @click="ketikaTerakhirDiklik" :disabled="!paginasi.last" :class="{ disabledButton:!paginasi.last }" class="button">Last</button>
+        </div>
+        <div class="mb5">
+            Total Hasil: {{ paginasi.total }}
+        </div>
+        <div class="halaman mb-5">
+            Halaman Ke: {{ paginasi.page }}
+        </div>
+        <ul class="daftar">
+            <li v-for="(hasil, indeks) in daftarHasil" :key="indeks">
+            <span v-html="hasil.text"></span>
+            <a :href="url + '&t=' + hasil.start + 's'" target="_blank">Youtube</a>
+            </li>
+        </ul>
+    </div>
+    </div>
+    <div class="nav-bar-bottom">
+    </div>
+    </div>
+    <script src=https://cdn.jsdelivr.net/npm/vue/dist/vue.js></script>
+    <script src="js/index.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                title: "Pencari Subtitle Youtube",
+                url: 'https://www.youtube.com/watch?v=klnvttPfOUM',
+                kataKunci: '',
+                daftarHasil: [],
+                paginasi: {
+                    first: null,
+                    prev: null,
+                    next: null,
+                    last: null,
+                    total: 0,
+                    page: null
+                }
+            },
+            computed: {
+                jadikanString(){
+                    return (parameter) => {
+                        return JSON.stringify(parameter, null, 2)
+                    }
+                }
+            },
+            watch: {
+                kataKunci: pDebounce(async function (kataKunci) {
+                if (kataKunci && kataKunci.length >= 3) {
+                await this.cari(kataKunci, this.url)
+                } else {
+                this.bersihkanHasil()
+                }
+                }, 250)
+            },
+            methods: {
+                async cari(kataKunci, url, paginasi){
+                    let urlApi = `https://cari-teks-video-api.vercel.app/api/search?q=${kataKunci}&url=${encodeURIComponent(url)}`
+                    if(paginasi){urlApi = paginasi
+                    }
+                        const respon = await fetch(urlApi).then(_respon => {
+                                if (_respon.ok){
+                                    return _respon.json()
+                                }
+                                return []
+                            })
+                        this.daftarHasil = respon.data
+                        this.paginasi.first = respon.first
+                        this.paginasi.prev = respon.prev
+                        this.paginasi.next = respon.next
+                        this.paginasi.last = respon.last
+                        this.paginasi.total = respon.total
+                        this.paginasi.page = respon.page
+                },
+                bersihkan(){
+                    this.kataKunci = ''
+                    this.bersihkanHasil()
+                },
+                bersihkanHasil() {
+                    this.daftarHasil = []
+                    this.paginasi = {
+                    first: null,
+                    prev: null,
+                    next: null,
+                    last: null,
+                    total: 0,
+                    page: null
+                    }
+                },
+                ketikaPertamaDiklik(){
+                    this.cari(this.kataKunci, this.url, this.paginasi.first)
+                },
+                ketikaSebelumnyaDiKlik(){
+                    this.cari(this.kataKunci, this.url, this.paginasi.prev)                
+                },
+                ketikaSelanjutnyaDiklik(){
+                    this.cari(this.kataKunci, this.url, this.paginasi.next)
+                },
+                ketikaTerakhirDiklik(){
+                    this.cari(this.kataKunci, this.url, this.paginasi.last)              
+                }
+            }
+        })
+    </script>
+</body>
+</html>
